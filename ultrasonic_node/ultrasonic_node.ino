@@ -10,29 +10,58 @@
 #define SERIAL_BAUD 9600
 #define ACK_TIME    30  // # of ms to wait for an ack
 
+int thereminLow = 1023; // variable to calibrate low value
+int thereminHigh = 0; // variable to calibrate high value
+
+int thereminValue;
 int TRANSMITPERIOD = 300; //transmit a packet to gateway so often (in ms)
 byte sendSize=0;
 boolean requestACK = false;
 RFM69 radio;
 Ultrasonic ultrasonic(5, 6, 10000);
 
-
+//defines data struct
 typedef struct {		
   int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
-  int         inches;   //temperature maybe?
+  int         inches;   //ultrasonic data
+  int         lightIntensity; //theremin data
 } Payload;
+
+//instantiates data struct
 Payload theData;
+
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(1000);
+  
+  //Sets up RFM
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
   radio.setHighPower(); //uncomment only for RFM69HW!
   radio.encrypt(KEY);
+  
+  //creates data buffer
   char buff[50];
+  
+  //Logs transmission status
   sprintf(buff, "\nTransmitting at %d Mhz...", FREQUENCY==RF69_433MHZ ? 433 : FREQUENCY==RF69_868MHZ ? 868 : 915);
   Serial.println(buff);
+  
+  //sets up theremin
+  while (millis() < 5000) {
+    // record the maximum sensor value
+    thereminValue = analogRead(A4);
+    if (thereminValue > thereminHigh) {
+      thereminHigh = thereminValue;
+    }
+    // record the minimum sensor value
+    if (thereminValue < thereminLow) {
+      thereminLow = thereminValue;
+    }
+  }
+  
+  
   //pinMode(4, OUTPUT); // VCC pin
   //pinMode(7, OUTPUT); // GND ping
   //digitalWrite(4, HIGH); // VCC +5V mode  
@@ -63,13 +92,16 @@ void loop()
   }
   if (currPeriod != lastPeriod)
   {
+    //read the input from A0 and store it in a variable
+    thereminValue = analogRead(A0);
     int inches;
     inches = ultrasonic.Ranging(INC);
     Serial.print(inches); // CM or INC
     Serial.println(" inches" );
     theData.nodeId = NODEID;
     theData.uptime = millis();
-    theData.inches = inches; //it's hot!
+    theData.inches = inches;
+    theData.lightIntensity = thereminValue;
     Serial.print("Sending struct (");
     Serial.print(sizeof(theData));
     Serial.print(" bytes) ... ");

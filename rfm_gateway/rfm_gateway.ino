@@ -7,7 +7,7 @@
 #define FREQUENCY   RF69_915MHZ //Match this with the version of your Moteino! (others: RF69_433MHZ, RF69_868MHZ)
 #define KEY         "GuidoE" //has to be same 16 characters/bytes on all nodes, not more not less!
 #define LED         9
-#define SERIAL_BAUD 115200
+#define SERIAL_BAUD 9600
 #define ACK_TIME    30  // # of ms to wait for an ack
 
 RFM69 radio;
@@ -17,7 +17,8 @@ bool promiscuousMode = false; //set to 'true' to sniff all packets on the same n
 typedef struct {		
   int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
-  int         inches;   //temperature maybe?
+  int         inches;   //ultrasonic data
+  int         lightIntensity; //theremin data
 } Payload;
 Payload theData;
 
@@ -94,6 +95,8 @@ void loop() {
       Serial.print(theData.uptime);
       Serial.print(" distance=");
       Serial.print(theData.inches);
+      Serial.print(" light=");
+      Serial.print(theData.lightIntensity);
     }
     
     if (radio.ACKRequested())
