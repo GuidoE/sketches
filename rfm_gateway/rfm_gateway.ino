@@ -5,9 +5,9 @@
 #define NODEID      1
 #define NETWORKID   100
 #define FREQUENCY   RF69_915MHZ //Match this with the version of your Moteino! (others: RF69_433MHZ, RF69_868MHZ)
-#define KEY         "GuidoE" //has to be same 16 characters/bytes on all nodes, not more not less!
+#define KEY         "1234098712340987" //has to be same 16 characters/bytes on all nodes, not more not less!
 #define LED         9
-#define SERIAL_BAUD 9600
+#define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
 
 RFM69 radio;
@@ -18,7 +18,7 @@ typedef struct {
   int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
   int         inches;   //ultrasonic data
-  int         lightIntensity; //theremin data
+  int         photo; //theremin data
 } Payload;
 Payload theData;
 
@@ -96,7 +96,7 @@ void loop() {
       Serial.print(" distance=");
       Serial.print(theData.inches);
       Serial.print(" light=");
-      Serial.print(theData.lightIntensity);
+      Serial.print(theData.photo);
     }
     
     if (radio.ACKRequested())

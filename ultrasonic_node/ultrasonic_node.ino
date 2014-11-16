@@ -5,15 +5,13 @@
 #define NETWORKID   100
 #define GATEWAYID   1
 #define FREQUENCY   RF69_915MHZ //Match this with the version of your Moteino! (others: RF69_433MHZ, RF69_868MHZ)
-#define KEY         "GuidoE" //has to be same 16 characters/bytes on all nodes, not more not less!
+#define KEY         "1234098712340987" //has to be same 16 characters/bytes on all nodes, not more not less!
 #define LED         9
-#define SERIAL_BAUD 9600
+#define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
 
-int thereminLow = 1023; // variable to calibrate low value
-int thereminHigh = 0; // variable to calibrate high value
 
-int thereminValue;
+int photoValue;
 int TRANSMITPERIOD = 300; //transmit a packet to gateway so often (in ms)
 byte sendSize=0;
 boolean requestACK = false;
@@ -25,7 +23,7 @@ typedef struct {
   int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
   int         inches;   //ultrasonic data
-  int         lightIntensity; //theremin data
+  int         photo; //theremin data
 } Payload;
 
 //instantiates data struct
@@ -34,7 +32,7 @@ Payload theData;
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
-  delay(1000);
+  delay(2000);
   
   //Sets up RFM
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
@@ -46,21 +44,7 @@ void setup() {
   
   //Logs transmission status
   sprintf(buff, "\nTransmitting at %d Mhz...", FREQUENCY==RF69_433MHZ ? 433 : FREQUENCY==RF69_868MHZ ? 868 : 915);
-  Serial.println(buff);
-  
-  //sets up theremin
-  while (millis() < 5000) {
-    // record the maximum sensor value
-    thereminValue = analogRead(A4);
-    if (thereminValue > thereminHigh) {
-      thereminHigh = thereminValue;
-    }
-    // record the minimum sensor value
-    if (thereminValue < thereminLow) {
-      thereminLow = thereminValue;
-    }
-  }
-  
+  Serial.println(buff);  
   
   //pinMode(4, OUTPUT); // VCC pin
   //pinMode(7, OUTPUT); // GND ping
@@ -92,16 +76,20 @@ void loop()
   }
   if (currPeriod != lastPeriod)
   {
-    //read the input from A0 and store it in a variable
-    thereminValue = analogRead(A0);
+    //read the input from A4 and store it in a variable
+    photoValue = analogRead(A4);
+    
+    
     int inches;
     inches = ultrasonic.Ranging(INC);
     Serial.print(inches); // CM or INC
-    Serial.println(" inches" );
+    Serial.print(" inches " );
+    Serial.print(photoValue);
+    Serial.println(" light");
     theData.nodeId = NODEID;
     theData.uptime = millis();
     theData.inches = inches;
-    theData.lightIntensity = thereminValue;
+    theData.photo = photoValue;
     Serial.print("Sending struct (");
     Serial.print(sizeof(theData));
     Serial.print(" bytes) ... ");
