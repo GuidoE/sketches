@@ -18,7 +18,8 @@ typedef struct {
   int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
   int         inches;   //ultrasonic data
-  int         photo; //theremin data
+  int         photo; //photoresistor data
+  int          temp; //theremistor data
 } Payload;
 Payload theData;
 
@@ -97,6 +98,9 @@ void loop() {
       Serial.print(theData.inches);
       Serial.print(" light=");
       Serial.print(theData.photo);
+      Serial.print(" temp=");
+      Serial.print(theData.temp);
+      Serial.print("F");
     }
     
     if (radio.ACKRequested())

@@ -9,26 +9,39 @@
 #define LED         9
 #define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
-
+#include <math.h>
 
 int photoValue;
+int temp;
 int TRANSMITPERIOD = 300; //transmit a packet to gateway so often (in ms)
 byte sendSize=0;
 boolean requestACK = false;
 RFM69 radio;
-Ultrasonic ultrasonic(5, 6, 10000);
+Ultrasonic ultrasonic(5, 6, 20000);
 
 //defines data struct
 typedef struct {		
   int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
   int         inches;   //ultrasonic data
-  int         photo; //theremin data
+  int         photo; //photoresistor data
+  int         temp; //theremistor data
 } Payload;
 
 //instantiates data struct
 Payload theData;
 
+
+double Thermistor(int RawADC) {
+ double Temp;
+ RawADC = RawADC * 3.3 / 4.772956;//converts 3.3v analog input into 5.0v
+ Temp = log(10000.0*((1024.0/RawADC-1))); 
+//         =log(10000.0/(1024.0/RawADC-1)) // for pull-up configuration
+ Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
+ Temp = Temp - 273.15;            // Convert Kelvin to Celcius
+ Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
+ return Temp;
+}
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
@@ -78,18 +91,21 @@ void loop()
   {
     //read the input from A4 and store it in a variable
     photoValue = analogRead(A4);
-    
+    temp = int(Thermistor(analogRead(A5)));
     
     int inches;
     inches = ultrasonic.Ranging(INC);
     Serial.print(inches); // CM or INC
     Serial.print(" inches " );
     Serial.print(photoValue);
-    Serial.println(" light");
+    Serial.print(" light ");
+    Serial.print(temp);
+    Serial.println(" F");
     theData.nodeId = NODEID;
     theData.uptime = millis();
     theData.inches = inches;
     theData.photo = photoValue;
+    theData.temp = temp;
     Serial.print("Sending struct (");
     Serial.print(sizeof(theData));
     Serial.print(" bytes) ... ");
