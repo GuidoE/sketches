@@ -1,4 +1,4 @@
 sketches
 ========
 
-Personal repo of Arduino sketches uses in home automation projects.
+Personal repo of Arduino sketches used in home automation projects.
