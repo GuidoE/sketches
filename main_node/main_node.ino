@@ -29,10 +29,8 @@ RFM69 radio;
 
 //defines data struct
 typedef struct {		
-  unsigned long uptime; //uptime in ms
-  char  data[48];
+  char  data[54];
 } Payload;
-
 //instantiates data struct
 Payload theData;
 
@@ -105,7 +103,7 @@ void loop()
     if (moisture == 1) Blink(SOIL,1000);
     
     //Instantiates JSON buffer
-    StaticJsonBuffer<48> jsonBuffer;
+    StaticJsonBuffer<54> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     
     root["gas"] = gas;
@@ -113,10 +111,8 @@ void loop()
     root["soil"] = moisture;
     root["temp"] = tempValue;
     
-    Serial.print("JSON buffer size ");
-    Serial.println(sizeof(jsonBuffer));
     root.printTo(theData.data, sizeof(theData.data));
-
+    
     Serial.print("Sending JSON (");
     Serial.print(sizeof(theData));
     Serial.print(" bytes) ... ");

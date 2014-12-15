@@ -23,10 +23,8 @@ Ultrasonic ultrasonic(5, 6, 20000);
 
 //defines data struct
 typedef struct {		
-  unsigned long uptime; //uptime in ms
-  char  data[48];
+  char  data[54];
 } Payload;
-
 //instantiates data struct
 Payload theData;
 
@@ -90,20 +88,16 @@ void loop()
     inches = ultrasonic.Ranging(INC);
     
     //Instantiates JSON buffer
-    StaticJsonBuffer<48> jsonBuffer;
+    StaticJsonBuffer<54> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     
     root["dist"] = inches;
     root["light"] = photoValue;
     root["temp"] = temp;
     
-    Serial.print("JSON buffer size ");
-    Serial.println(sizeof(jsonBuffer));
-    
     root.printTo(theData.data, sizeof(theData.data));
-    theData.uptime = millis();
 
-    Serial.print("Sending JSON reference (");
+    Serial.print("Sending JSON (");
     Serial.print(sizeof(theData));
     Serial.print(" bytes) ... ");
     if (radio.sendWithRetry(GATEWAYID, (const void*)(&theData), sizeof(theData)))

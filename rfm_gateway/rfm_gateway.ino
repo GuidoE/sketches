@@ -19,19 +19,9 @@ SPIFlash flash(8, 0xEF30); //EF40 for 16mbit windbond chip
 bool promiscuousMode = false; //set to 'true' to sniff all packets on the same network
 
 typedef struct {		
-  unsigned long uptime; //uptime in ms
-  char      data[48];
+  char      data[54];
 } Payload;
 Payload theData;
-
-typedef struct {		
-  int           nodeId; //store this nodeId
-  unsigned long uptime; //uptime in ms
-  int         gas;   //gas data
-  int         photo; //photoresistor data
-  int          moisture; //moisture data
-} Mainload;
-Mainload mainData;
   
 void setup() {
   Serial.begin(SERIAL_BAUD);
@@ -114,9 +104,13 @@ void loop() {
 
     if (!root.success())
     {
-      Serial.print("Data Length");
-      Serial.println(radio.DATALEN);      
-      Serial.println("parseObject() failed");
+      Serial.print("Radio Data Length ");
+      Serial.println(radio.DATALEN);
+      Serial.print("Object Length ");
+      Serial.print(sizeof(theData));
+      Serial.print("Data object ");
+      Serial.println(theData.data);
+      Serial.println(" parseObject() failed");
       return;
     }
     int relayValue;
