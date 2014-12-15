@@ -10,6 +10,9 @@
 #define LED         9
 #define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
+#define RELAY_ON 1
+#define RELAY_OFF 0
+#define RELAY_1  3
 
 RFM69 radio;
 SPIFlash flash(8, 0xEF30); //EF40 for 16mbit windbond chip
@@ -44,6 +47,11 @@ void setup() {
     Serial.println("SPI Flash Init OK!");
   else
     Serial.println("SPI Flash Init FAIL! (is chip present?)");
+  // Set pin as output.
+  pinMode(RELAY_1, OUTPUT);
+ 
+  // Initialize relay one as off so that on reset it would be off by default
+  digitalWrite(RELAY_1, RELAY_OFF);
 }
 
 byte ackCount=0;
@@ -71,6 +79,17 @@ void loop() {
       word jedecid = flash.readDeviceId();
       Serial.println(jedecid, HEX);
     }
+    
+    if (input == 'o') {
+      // Turn on and wait 3 seconds.
+      digitalWrite(RELAY_1, RELAY_ON);
+    }
+    
+    if (input == 'f') {
+      // Turn on and wait 3 seconds.
+      digitalWrite(RELAY_1, RELAY_OFF);
+    }
+    
     if (input == 't')
     {
       byte temperature =  radio.readTemperature(-1); // -1 = user cal factor, adjust for correct ambient
@@ -100,9 +119,13 @@ void loop() {
       Serial.println("parseObject() failed");
       return;
     }
+    int relayValue;
+    relayValue = digitalRead(RELAY_1);
+    
     root["signal"] = radio.readRSSI();
     root["id"] = radio.SENDERID;
     root["uptime"] = theData.uptime;
+    root["relay"] = relayValue;
     
     if (radio.ACKRequested())
     {
