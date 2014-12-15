@@ -1,6 +1,7 @@
 #include <RFM69.h>
 #include <SPI.h>
 #include <SPIFlash.h>
+#include <ArduinoJson.h>
 
 #define NODEID      1
 #define NETWORKID   100
@@ -15,14 +16,20 @@ SPIFlash flash(8, 0xEF30); //EF40 for 16mbit windbond chip
 bool promiscuousMode = false; //set to 'true' to sniff all packets on the same network
 
 typedef struct {		
-  int           nodeId; //store this nodeId
   unsigned long uptime; //uptime in ms
-  int         inches;   //ultrasonic data
-  int         photo; //photoresistor data
-  int          temp; //theremistor data
+  char      data[48];
 } Payload;
 Payload theData;
 
+typedef struct {		
+  int           nodeId; //store this nodeId
+  unsigned long uptime; //uptime in ms
+  int         gas;   //gas data
+  int         photo; //photoresistor data
+  int          moisture; //moisture data
+} Mainload;
+Mainload mainData;
+  
 void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(1000);
@@ -77,52 +84,52 @@ void loop() {
   }
 
   if (radio.receiveDone())
-  {
-    Serial.print('[');Serial.print(radio.SENDERID, DEC);Serial.print("] ");
-    Serial.print(" [RX_RSSI:");Serial.print(radio.readRSSI());Serial.print("]");
-    if (promiscuousMode)
+  {    
+    StaticJsonBuffer<200> jsonBuffer;
+    /*if (promiscuousMode)
 	{
       Serial.print("to [");Serial.print(radio.TARGETID, DEC);Serial.print("] ");
-    }
-	
-    if (radio.DATALEN != sizeof(Payload))
-      Serial.print("Invalid payload received, not matching Payload struct!");
-    else
+    }*/
+    theData = *(Payload*)radio.DATA;
+    JsonObject& root = jsonBuffer.parseObject(theData.data);
+
+    if (!root.success())
     {
-      theData = *(Payload*)radio.DATA; //assume radio.DATA actually contains our struct and not something else
-      Serial.print(" nodeId=");
-      Serial.print(theData.nodeId);
-      Serial.print(" uptime=");
-      Serial.print(theData.uptime);
-      Serial.print(" distance=");
-      Serial.print(theData.inches);
-      Serial.print(" light=");
-      Serial.print(theData.photo);
-      Serial.print(" temp=");
-      Serial.print(theData.temp);
-      Serial.print("F");
+      Serial.print("Data Length");
+      Serial.println(radio.DATALEN);      
+      Serial.println("parseObject() failed");
+      return;
     }
+    root["signal"] = radio.readRSSI();
+    root["id"] = radio.SENDERID;
+    root["uptime"] = theData.uptime;
     
     if (radio.ACKRequested())
     {
       byte theNodeID = radio.SENDERID;
       radio.sendACK();
-      Serial.print(" - ACK sent.");
+      //Serial.print(" - ACK sent.");
 
       // When a node requests an ACK, respond to the ACK
       // and also send a packet requesting an ACK (every 3rd one only)
       // This way both TX/RX NODE functions are tested on 1 end at the GATEWAY
       if (ackCount++%3==0)
       {
-        Serial.print(" Pinging node ");
-        Serial.print(theNodeID);
-        Serial.print(" - ACK...");
+        //Serial.print(" Pinging node ");
+        //Serial.print(theNodeID);
+        //Serial.print(" - ACK...");
         delay(3); //need this when sending right after reception .. ?
-        if (radio.sendWithRetry(theNodeID, "ACK TEST", 8, 0))  // 0 = only 1 attempt, no retries
-          Serial.print("ok!");
-        else Serial.print("nothing");
+        if (radio.sendWithRetry(theNodeID, "ACK TEST", 8, 0)){  // 0 = only 1 attempt, no retries
+          //Serial.print("ok!");
+          root["ack"] = "ok!";
+        }
+        else {
+          //Serial.print("nothing");
+          root["ack"] = "nothing";
+        }
       }
     }
+    root.printTo(Serial);
     Serial.println();
     Blink(LED,3);
   }

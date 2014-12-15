@@ -1,25 +1,31 @@
 #include <RFM69.h>
 #include <SPI.h>
-#include <Ultrasonic.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <math.h>
 #include <ArduinoJson.h>
 
-#define NODEID      99
+#define NODEID      98
 #define NETWORKID   100
 #define GATEWAYID   1
 #define FREQUENCY   RF69_915MHZ //Match this with the version of your Moteino! (others: RF69_433MHZ, RF69_868MHZ)
 #define KEY         "1234098712340987" //has to be same 16 characters/bytes on all nodes, not more not less!
 #define LED         9
+#define GAS      3
+#define SOIL      5
 #define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
-#include <math.h>
+#define ONE_WIRE_BUS 8 // Data wire is plugged into port 2 on the Arduino
 
 int photoValue;
-int temp;
+int gas;
+int moisture;
+
 int TRANSMITPERIOD = 300; //transmit a packet to gateway so often (in ms)
 byte sendSize=0;
 boolean requestACK = false;
 RFM69 radio;
-Ultrasonic ultrasonic(5, 6, 20000);
+
 
 //defines data struct
 typedef struct {		
@@ -30,17 +36,11 @@ typedef struct {
 //instantiates data struct
 Payload theData;
 
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
 
-double Thermistor(int RawADC) {
- double Temp;
- RawADC = RawADC * 3.3 / 4.772956;//converts 3.3v analog input into 5.0v
- Temp = log(10000.0*((1024.0/RawADC-1))); 
-//         =log(10000.0/(1024.0/RawADC-1)) // for pull-up configuration
- Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
- Temp = Temp - 273.15;            // Convert Kelvin to Celcius
- Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
- return Temp;
-}
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
@@ -57,7 +57,10 @@ void setup() {
   //Logs transmission status
   sprintf(buff, "\nTransmitting at %d Mhz...", FREQUENCY==RF69_433MHZ ? 433 : FREQUENCY==RF69_868MHZ ? 868 : 915);
   Serial.println(buff);  
+  pinMode(7, INPUT);
   
+  // Start up the OneWire library
+  sensors.begin();
   //pinMode(4, OUTPUT); // VCC pin
   //pinMode(7, OUTPUT); // GND ping
   //digitalWrite(4, HIGH); // VCC +5V mode  
@@ -69,10 +72,16 @@ byte ackCount=0;
 
 void loop()
 {
+  sensors.requestTemperatures(); // Send the command to get temperatures
   int currPeriod = millis()/TRANSMITPERIOD;
   //check for any received packets
   if (radio.receiveDone())
   {
+    Serial.print('[');Serial.print(radio.SENDERID, DEC);Serial.print("] ");
+    for (byte i = 0; i < radio.DATALEN; i++)
+      Serial.print((char)radio.DATA[i]);
+    Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]");
+
     if (radio.ACKRequested())
     {
       radio.sendACK();
@@ -85,32 +94,37 @@ void loop()
   {
     //read the input from A4 and store it in a variable
     photoValue = map(analogRead(A4), 0, 1023, 0, 100);
-    temp = int(Thermistor(analogRead(A5)));
-    int inches;
-    inches = ultrasonic.Ranging(INC);
+    int tempValue = DallasTemperature::toFahrenheit(sensors.getTempCByIndex(0));
+    
+    int sensorValue = analogRead(A2);
+    gas = map(sensorValue, 0, 1023, 0, 100);
+    moisture = digitalRead(7);
+    
+    if (gas > 25) Blink(GAS,1000);
+    
+    if (moisture == 1) Blink(SOIL,1000);
     
     //Instantiates JSON buffer
     StaticJsonBuffer<48> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     
-    root["dist"] = inches;
+    root["gas"] = gas;
     root["light"] = photoValue;
-    root["temp"] = temp;
+    root["soil"] = moisture;
+    root["temp"] = tempValue;
     
     Serial.print("JSON buffer size ");
     Serial.println(sizeof(jsonBuffer));
-    
     root.printTo(theData.data, sizeof(theData.data));
-    theData.uptime = millis();
 
-    Serial.print("Sending JSON reference (");
+    Serial.print("Sending JSON (");
     Serial.print(sizeof(theData));
     Serial.print(" bytes) ... ");
     if (radio.sendWithRetry(GATEWAYID, (const void*)(&theData), sizeof(theData)))
       Serial.print(" ok!");
     else Serial.print(" nothing...");
     Serial.println();
-    
+   
     Blink(LED,3);
     lastPeriod=currPeriod;
     delay(1000);
