@@ -5,5 +5,5 @@
 .d
 .cproject
 .settings
-Release
+/Release/
 .metadata
