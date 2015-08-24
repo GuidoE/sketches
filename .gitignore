@@ -7,3 +7,4 @@
 .settings
 /Release/
 .metadata
+spec.d
