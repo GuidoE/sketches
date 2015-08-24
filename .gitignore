@@ -1,1 +1,8 @@
 /.project
+.so
+.o
+.ar
+.d
+.cproject
+.settings
+Release
