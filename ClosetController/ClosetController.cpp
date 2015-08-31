@@ -4,15 +4,12 @@
 #include "Arduino.h"
 #include "PIR.h"
 
-PowerTail tail(A1, 13);
-PIR pir(7, 13, 10);
+PowerTail tail(A1, 12);
+PIR pir(7, 13, 30);
 
 boolean action;
 
 void setup() {
-	pinMode(12, OUTPUT);
-
-	digitalWrite(12, HIGH);
 	Serial.begin(9600);
 	Serial.print("calibrating sensor ");
 	for (int i = 0; i < pir.calibrationTime; i++) {
