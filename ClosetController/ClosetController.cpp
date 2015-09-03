@@ -4,8 +4,9 @@
 #include "Arduino.h"
 #include "PIR.h"
 
+
 PowerTail tail(A1, 12);
-PIR pir(7, 13, 30);
+PIR pir(7, 13, 20, 0);
 
 boolean action;
 
@@ -25,22 +26,21 @@ void setup() {
 }
 
 void loop() {
-	pir.Motion();
-	/*if (pir.presence == true && action != action) {
-		tail.ManualPower();
-		action = !action;
-	} else if (pir.presence == true && tail.powerOn == true) {
-		//Serial.println("Still sensing presence");
-	} else {
-		tail.ManualPower();
-		action = !action;
+	/*if (digitalRead(pir.pirPin) == HIGH && !action){
+		Serial.println("On");
+		action = true;
+	}
+	if (digitalRead(pir.pirPin) == LOW && action){
+		Serial.println("Off");
+		action = true;
 	}*/
-	if (pir.presence && action == false) {
+
+	pir.Motion();
+	if (pir.presence && !action) {
 		tail.ManualPower();
 		action = true;
-	} else if (!pir.presence && action == true) {
+	} else if (!pir.presence && action) {
 		tail.ManualPower();
 		action = false;
 	}
-
 }
