@@ -3,15 +3,32 @@
 #include "PowerTail.h"
 #include "Arduino.h"
 #include "PIR.h"
+#include "LowPower.h"
 
+// Use pin 2 as wake up pin
+const int wakeUpPin = 2;
 
 PowerTail tail(A1, 12);
-PIR pir(7, 13, 20, 0);
+PIR pir(2, 13, 20, 0);
 
 boolean action;
 
+void wakeUp()
+{
+    // Just a handler for the pin interrupt.
+	if (digitalRead(pir.pirPin) == HIGH) {
+		tail.TurnOn();
+		Serial.flush();
+	} else {
+		tail.TurnOff();
+		Serial.flush();
+	}
+}
+
 void setup() {
 	Serial.begin(9600);
+	pinMode(A1, OUTPUT);
+	digitalWrite(A1, HIGH);
 	Serial.print("calibrating sensor ");
 	for (int i = 0; i < pir.calibrationTime; i++) {
 		Serial.print(".");
@@ -34,13 +51,18 @@ void loop() {
 		Serial.println("Off");
 		action = true;
 	}*/
-
+	// Do something here
+	// Example: Read sensor, data logging, data transmission.
 	pir.Motion();
-	if (pir.presence && !action) {
-		tail.ManualPower();
-		action = true;
-	} else if (!pir.presence && action) {
-		tail.ManualPower();
-		action = false;
-	}
+	Serial.flush();
+	// Allow wake up pin to trigger interrupt on low.
+	attachInterrupt(0, wakeUp, CHANGE);
+
+	// Enter power down state with ADC and BOD module disabled.
+	// Wake up when wake up pin is low.
+	LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
+
+	// Disable external pin interrupt on wake up pin.
+	detachInterrupt(0);
+	Serial.flush();
 }
